@@ -1,0 +1,10 @@
+{
+  "selected_video": "None",
+  "random": {
+    "enabled": false,
+    "interval": 0,
+    "video_name": "",
+    "last_updated": ""
+  },
+  "pause_flag": true
+}

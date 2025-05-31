@@ -1,0 +1,277 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video Selector</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <style>
+    .video-wrapper {
+      width: 100%;
+      max-width: 360px;
+      height: 640px;
+      overflow: hidden;
+      margin-top: 1rem;
+    }
+
+    #videoPreview {
+      width: 640px;
+      height: 360px;
+      transform: rotate(90deg) translate(0, -100%);
+      transform-origin: top left;
+      display: block;
+      max-width: none;
+    }
+
+    #dropArea {
+      cursor: pointer;
+      transition: background-color 0.3s, border-color 0.3s;
+    }
+
+    @media (max-width: 400px) {
+      .video-wrapper {
+        overflow-x: auto;
+      }
+    }
+  </style>
+</head>
+<body class="bg-light py-4">
+  <div class="container">
+    <h1 class="mb-4">Video Selector</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+          </div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-3" id="videoTabs" role="tablist">
+      <li class="nav-item" role="presentation">
+        <button class="nav-link active" id="select-tab" data-bs-toggle="tab" data-bs-target="#select" type="button" role="tab">Select</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="upload-tab" data-bs-toggle="tab" data-bs-target="#upload" type="button" role="tab">Upload</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="manage-tab" data-bs-toggle="tab" data-bs-target="#manage" type="button" role="tab">Manage</button>
+      </li>
+      <li class="nav-item" role="presentation">
+        <button class="nav-link" id="logs-tab" data-bs-toggle="tab" data-bs-target="#logs" type="button" role="tab">Logs</button>
+      </li>
+    </ul>
+
+    <div class="tab-content" id="videoTabsContent">
+      <!-- Select Tab -->
+      <div class="tab-pane fade show active" id="select" role="tabpanel" aria-labelledby="select-tab">
+        
+          <!-- Pause System -->
+<form method="POST" action="{{ url_for('pause_toggle') }}">
+          <div class="mb-3 form-check">
+  <input class="form-check-input" type="checkbox" id="pauseSystem" name="pause" value="on" {% if pause %}checked{% endif %} onchange="this.form.submit()" />
+  <label class="form-check-label" for="pauseSystem">Pause System</label>
+</form>
+
+
+          </div>
+
+          <div id="pauseMessage" class="alert alert-warning" style="display: {{ 'block' if pause else 'none' }}">
+            <strong>System is paused.</strong> No video will be switched or played during this time.
+          </div>
+<form method="POST" action="{{ url_for('select') }}">
+          <div id="mainControls" style="display: {{ 'none' if pause else 'block' }}">
+            {% if videos|length > 1 %}
+            <div class="mb-3 form-check">
+              <input class="form-check-input" type="checkbox" id="randomMode" name="random_mode" value="on" {% if random_mode %}checked{% endif %} onchange="toggleRandomMode()" />
+              <label class="form-check-label" for="randomMode">Enable Random Mode</label>
+            </div>
+            {% endif %}
+
+            <div class="mb-3" id="intervalGroup" style="display: {{ 'block' if random_mode else 'none' }}">
+              <label for="interval" class="form-label">Interval (minutes):</label>
+              <select class="form-select" id="interval" name="interval" {% if not random_mode %}disabled{% endif %}>
+                {% for i in range(1, 61) %}
+                  <option value="{{ i }}" {% if i == random_interval %}selected{% endif %}>{{ i }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <div id="videoSelectGroup" style="display: {{ 'none' if random_mode else 'block' }}">
+              <label for="video" class="form-label">Select Video:</label>
+              <select class="form-select" id="video" name="video" onchange="updateVideoPreview()">
+                <option value="">-- Select a video --</option>
+                {% for video in videos %}
+                  <option value="{{ video }}" {% if video == selected %}selected{% endif %}>{{ video }}</option>
+                {% endfor %}
+              </select>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Save</button>
+
+            <div class="video-wrapper">
+              {% if random_mode and time_remaining is not none %}
+              <div class="mt-3">
+                <h5>Random mode active</h5>
+                <p>Current Video: <strong>{{ current_random_video }}</strong></p>
+                <p>Next switch in: <span id="countdown">{{ time_remaining }}</span> seconds</p>
+              </div>
+              {% else %}
+              <h5>Selected Video</h5>
+              <p>Current Video: <strong>{{ selected }}</strong></p>
+              {% endif %}
+
+              <video id="videoPreview" controls autoplay muted>
+                {% if not random_mode and selected %}
+                  <source src="{{ url_for('video_file', filename=selected) }}" type="video/mp4" />
+                {% elif random_mode and current_random_video %}
+                  <source src="{{ url_for('video_file', filename=current_random_video) }}" type="video/mp4" />
+                {% else %}
+                  <p>No video selected or available.</p>
+                {% endif %}
+                Your browser does not support the video tag.
+              </video>
+            </div>
+          </div>
+        </form>
+      </div>
+
+
+
+
+      <!-- Upload Tab -->
+      <div class="tab-pane fade" id="upload" role="tabpanel" aria-labelledby="upload-tab">
+        <form id="uploadForm" method="POST" action="{{ url_for('upload') }}" enctype="multipart/form-data">
+          <div id="dropArea" class="border border-3 border-secondary rounded p-5 text-center bg-white">
+            <p class="mb-2">Drag & drop an MP4 file here</p>
+            <p class="small text-muted">or click to select</p>
+            <input type="file" id="fileInput" name="file" accept=".mp4" hidden />
+            <button type="button" class="btn btn-outline-secondary btn-sm" onclick="document.getElementById('fileInput').click()">Choose File</button>
+            <p id="fileName" class="mt-3 fw-bold text-success"></p>
+          </div>
+          <div class="text-center mt-3">
+            <button type="submit" class="btn btn-success" id="uploadBtn" disabled>Upload</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Manage Tab -->
+      <div class="tab-pane fade" id="manage" role="tabpanel" aria-labelledby="manage-tab">
+        <h5>Manage Videos</h5>
+        <ul class="list-group">
+          {% for video in videos %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              {{ video }}
+              <form method="POST" action="{{ url_for('delete', filename=video) }}" onsubmit="return confirm('Delete {{ video }}?');">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </li>
+          {% else %}
+            <li class="list-group-item">No videos found.</li>
+          {% endfor %}
+        </ul>
+      </div>
+
+      <!-- Logs Tab -->
+      <div class="tab-pane fade" id="logs" role="tabpanel" aria-labelledby="logs-tab">
+        <h5>Logs</h5>
+        <ul class="list-group mb-3">
+          {% for log in logs %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+              <a href="{{ url_for('view_log', filename=log) }}">{{ log }}</a>
+              <form method="POST" action="{{ url_for('delete_log', filename=log) }}" onsubmit="return confirm('Delete log {{ log }}?');">
+                <button type="submit" class="btn btn-danger btn-sm">Delete</button>
+              </form>
+            </li>
+          {% else %}
+            <li class="list-group-item">No logs found.</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    const dropArea = document.getElementById('dropArea');
+    const fileInput = document.getElementById('fileInput');
+    const fileName = document.getElementById('fileName');
+    const uploadBtn = document.getElementById('uploadBtn');
+
+    ['dragenter', 'dragover'].forEach(eventName => {
+      dropArea.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropArea.classList.add('border-success', 'bg-light');
+      });
+    });
+
+    ['dragleave', 'drop'].forEach(eventName => {
+      dropArea.addEventListener(eventName, e => {
+        e.preventDefault();
+        e.stopPropagation();
+        dropArea.classList.remove('border-success', 'bg-light');
+      });
+    });
+
+    dropArea.addEventListener('drop', e => {
+      const files = e.dataTransfer.files;
+      handleFile(files[0]);
+    });
+
+    fileInput.addEventListener('change', e => {
+      if (e.target.files.length > 0) handleFile(e.target.files[0]);
+    });
+
+    function handleFile(file) {
+      if (file.type === "video/mp4") {
+        const dt = new DataTransfer();
+        dt.items.add(file);
+        fileInput.files = dt.files;
+        fileName.textContent = `Selected: ${file.name}`;
+        uploadBtn.disabled = false;
+      } else {
+        fileName.textContent = "Please upload a valid MP4 file.";
+        uploadBtn.disabled = true;
+      }
+    }
+
+    function toggleRandomMode() {
+      const isChecked = document.getElementById('randomMode').checked;
+      document.getElementById('intervalGroup').style.display = isChecked ? 'block' : 'none';
+      document.getElementById('interval').disabled = !isChecked;
+      document.getElementById('videoSelectGroup').style.display = isChecked ? 'none' : 'block';
+    }
+
+    function togglePause() {
+      const isPaused = document.getElementById('pauseSystem').checked;
+      document.getElementById('pauseMessage').style.display = isPaused ? 'block' : 'none';
+      document.getElementById('mainControls').style.display = isPaused ? 'none' : 'block';
+    }
+
+    function updateVideoPreview() {
+      const video = document.getElementById('video').value;
+      const preview = document.getElementById('videoPreview');
+      preview.src = video ? `/videos/${encodeURIComponent(video)}` : "";
+      video ? preview.load() : preview.pause();
+    }
+
+    {% if random_mode and time_remaining is not none and time_remaining > 0 %}
+    let countdown = {{ time_remaining }};
+    const countdownElement = document.getElementById('countdown');
+    const interval = setInterval(() => {
+      if (--countdown >= 0) countdownElement.textContent = countdown;
+      else {
+        clearInterval(interval);
+        location.reload();
+      }
+    }, 1000);
+    {% endif %}
+  </script>
+</body>
+</html>
