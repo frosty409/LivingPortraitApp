@@ -102,15 +102,15 @@ EOF
 fi
 
 echo -e "\nDownloading motion_vlc.py to /home/pi..."
-curl -fsSL "https://raw.githubusercontent.com/yourusername/yourrepo/main/motion_vlc.py" -o /home/pi/motion_vlc.py
-curl -fsSL "https://raw.githubusercontent.com/yourusername/yourrepo/main/settings.json" -o /home/pi/settings.json
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o /home/pi/motion_vlc.py
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o /home/pi/settings.json
 chmod +x /home/pi/motion_vlc.py
 
 echo "Creating /home/pi/PauseVideo directory..."
 mkdir -p /home/pi/PauseVideo
 
 echo "Downloading paused_rotated.mp4 to /home/pi/PauseVideo..."
-curl -fsSL "https://raw.githubusercontent.com/yourusername/yourrepo/main/paused_rotated.mp4" -o /home/pi/PauseVideo/paused_rotated.mp4
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/PauseVideo/paused_rotated.mp4" -o /home/pi/PauseVideo/paused_rotated.mp4
 
 echo -e "\nCreating logs folder..."
 mkdir -p /home/pi/logs
@@ -119,9 +119,9 @@ echo -e "\nCreating Flask app directory and structure..."
 mkdir -p /home/pi/flask_ui/templates
 
 echo -e "\nDownloading Flask app files..."
-curl -fsSL "https://raw.githubusercontent.com/yourusername/yourrepo/main/flask_ui/app.py" -o /home/pi/flask_ui/app.py
-curl -fsSL "https://raw.githubusercontent.com/yourusername/yourrepo/main/flask_ui/templates/index.html" -o /home/pi/flask_ui/templates/index.html
-curl -fsSL "https://raw.githubusercontent.com/yourusername/yourrepo/main/flask_ui/templates/view_log.html" -o /home/pi/flask_ui/templates/view_log.html
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o /home/pi/flask_ui/app.py
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.htmll" -o /home/pi/flask_ui/templates/index.html
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/view_log.html" -o /home/pi/flask_ui/templates/view_log.html
 
 echo -e "\nCreating motion_vlc.service systemd file..."
 sudo tee /etc/systemd/system/motion_vlc.service > /dev/null << EOF
