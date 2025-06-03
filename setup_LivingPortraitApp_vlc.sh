@@ -83,23 +83,6 @@ else
     log_fail "Starting Flask service"
 fi
 
-echo -e "\nAdding motion_vlc.py to auto-run on console login..."
-if grep -qxF 'if [ -z "$DISPLAY" ] && [ "$(tty)" = "/dev/tty1" ]; then' ~/.bashrc; then
-    echo ".bashrc already contains autorun code."
-else
-    if cat << 'EOF' >> ~/.bashrc
-
-# Auto-run motion_vlc.py on console login
-if [ -z "\$DISPLAY" ] && [ "\$(tty)" = "/dev/tty1" ]; then
-    /usr/bin/python3 /home/pi/motion_vlc.py
-fi
-EOF
-    then
-        log_success "Autorun added to .bashrc"
-    else
-        log_fail "Modifying .bashrc"
-    fi
-fi
 
 echo -e "\nDownloading motion_vlc.py to /home/pi..."
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o /home/pi/motion_vlc.py
