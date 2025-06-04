@@ -103,7 +103,7 @@ mkdir -p /home/pi/flask_ui/templates
 
 echo -e "\nDownloading Flask app files..."
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o /home/pi/flask_ui/app.py
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.htmll" -o /home/pi/flask_ui/templates/index.html
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" -o /home/pi/flask_ui/templates/index.html
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/view_log.html" -o /home/pi/flask_ui/templates/view_log.html
 
 echo -e "\nCreating motion_vlc.service systemd file..."
