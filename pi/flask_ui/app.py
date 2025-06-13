@@ -1,233 +1,257 @@
 from flask import Flask, render_template, request, redirect, url_for, flash, send_from_directory
 from pathlib import Path
 import os
-import threading
-import time
-import random
 from datetime import datetime, timedelta
-import json
+import random
+from flask import jsonify
+
+import sys
+sys.path.append('/home/pi/')
+from shared.vlc_helper import (
+    log,
+    load_settings,
+    save_settings,
+    get_playlist_settings,
+    update_playlist_settings,
+    read_pause_flag,
+    write_pause_flag,
+    get_days_schedule,
+    update_days_schedule,
+    is_schedule_enabled_now,
+    get_next_start_time
+)
 
 app = Flask(__name__)
-app.secret_key = 'replace-this-with-a-secure-random-key'
+app.secret_key = 'replace-this-with-a-secure-random-key'  # Change to a secure key in production
 
-VIDEO_FOLDER = Path("/home/pi/Videos")
+VIDEO_FOLDER = Path("/home/pi/videos")
+IMAGES_FOLDER = Path("/home/pi/images")
 LOG_FOLDER = Path("/home/pi/logs")
 SETTINGS_FILE = Path("/home/pi/settings.json")
 
 VIDEO_FOLDER.mkdir(parents=True, exist_ok=True)
 LOG_FOLDER.mkdir(parents=True, exist_ok=True)
 
-# Thread control
-random_thread = None
-stop_random_thread = threading.Event()
-
-def load_settings():
-    if SETTINGS_FILE.exists():
-        with open(SETTINGS_FILE, 'r') as f:
-            return json.load(f)
-    return {
-        "selected_video": "",
-        "random": {
-            "enabled": False,
-            "interval": 0,
-            "video_name": "",
-            "last_updated": ""
-        },
-        "pause_flag": False
-    }
-
-def save_settings(settings):
-    with open(SETTINGS_FILE, 'w') as f:
-        json.dump(settings, f, indent=2)
-
-def get_random_config():
-    settings = load_settings()
-    r = settings.get("random", {})
-    return (
-        r.get("enabled", False),
-        r.get("interval", 0),
-        r.get("video_name", ""),
-        r.get("last_updated", "")
-    )
-
-def update_random_config(enabled: bool, interval: int = 0, video_name: str = '', last_updated: str = ''):
-    settings = load_settings()
-    settings["random"] = {
-        "enabled": enabled,
-        "interval": interval,
-        "video_name": video_name,
-        "last_updated": last_updated
-    }
-    if not enabled:
-        settings["random"]["interval"] = 0
-        settings["random"]["video_name"] = ""
-        settings["random"]["last_updated"] = ""
-    save_settings(settings)
-
-def read_pause_flag():
-    return load_settings().get("pause_flag", False)
-
-def write_pause_flag(is_paused):
-    settings = load_settings()
-    settings["pause_flag"] = is_paused
-    save_settings(settings)
-
-def random_video_updater():
-    while not stop_random_thread.is_set():
-        enabled, interval, _, last_updated = get_random_config()
-        if not enabled or interval <= 0:
-            time.sleep(5)
-            continue
-
-        videos = sorted([f.name for f in VIDEO_FOLDER.glob("*.mp4")])
-        if not videos:
-            time.sleep(10)
-            continue
-
-        settings = load_settings()
-        current_video = settings.get("selected_video", "")
-        new_video = current_video
-        while new_video == current_video and len(videos) > 1:
-            new_video = random.choice(videos)
-
-        settings["selected_video"] = new_video
-        save_settings(settings)
-
-        now = datetime.now()
-        last_updated_str = now.strftime("%Y-%m-%d %H:%M:%S")
-        update_random_config(True, interval, video_name=new_video, last_updated=last_updated_str)
-        print(f"[Random updater] New video: {new_video} at {last_updated_str}")
-
-        # Calculate how much time to sleep based on last_updated
-        try:
-            last_dt = datetime.strptime(last_updated_str, "%Y-%m-%d %H:%M:%S")
-            next_dt = last_dt + timedelta(minutes=interval)
-            now = datetime.now()
-            wait_seconds = (next_dt - now).total_seconds()
-            if wait_seconds < 1:
-                wait_seconds = 1  # avoid tight loop
-        except Exception as e:
-            print(f"Error parsing last_updated in thread: {e}")
-            wait_seconds = interval * 60
-
-        # Sleep in 1-second increments so stop_random_thread can interrupt
-        for _ in range(int(wait_seconds)):
-            if stop_random_thread.is_set():
-                break
-            time.sleep(1)
-
 @app.route("/")
 def index():
+    current_time = datetime.now().strftime("%A %I:%M:%S %p") 
+    theme = request.cookies.get("themeMode", "light")
     videos = sorted([f.name for f in VIDEO_FOLDER.glob("*.mp4")])
     settings = load_settings()
     selected_video = settings.get("selected_video", "")
+    pause_flag = settings.get("pause_flag", False)
 
-    random_mode, random_interval, current_random_video, last_updated = get_random_config()
-    # If random mode is on, don't show selected video (since random video is playing)
-    selected_video_display = selected_video if not random_mode else None
+    mode, interval, last_updated, order, triggered_flag, delay = get_playlist_settings()
 
-    logs = sorted([f.name for f in LOG_FOLDER.iterdir() if f.is_file()], reverse=True)
+    # Get days schedule
+    days_schedule = settings.get("days", {})
 
-    # Calculate time remaining until next video switch if random mode is on
+    # Check if schedule is enabled right now
+    schedule_enabled = is_schedule_enabled_now()
+
+    next_start_time = get_next_start_time(settings)
+
+    fixed_order = [
+         entry for entry in order
+         if isinstance(entry, dict) and entry.get("filename") in videos and entry.get("active")
+    ]
+
+    manage_videos = [
+        entry for entry in order
+        if isinstance(entry, dict) and entry.get("filename") in videos
+    ]
+
+    # Calculate time remaining until next video switch
     time_remaining = None
-    if random_mode and last_updated and random_interval > 0:
+    if mode in ["random", "fixed"] and last_updated and interval > 0:
         try:
-            last_updated_dt = datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
-            next_switch = last_updated_dt + timedelta(minutes=random_interval)
+            last_dt = datetime.strptime(last_updated, "%Y-%m-%d %H:%M:%S")
+            next_dt = last_dt + timedelta(seconds=interval * 60)
             now = datetime.now()
-            diff = (next_switch - now).total_seconds()
-            time_remaining = max(1, int(diff))
+            diff = (next_dt - now).total_seconds()
+            time_remaining = max(0, int(diff))
         except Exception as e:
-            print(f"Error parsing last_updated time: {e}")
+            log(f"Error calculating time remaining: {e}")
 
-    is_paused = read_pause_flag()
+    logs = []
+    if LOG_FOLDER.exists():
+        for f in LOG_FOLDER.glob("*.txt"):
+            logs.append({
+                "name": f.name,
+                "mtime": datetime.fromtimestamp(f.stat().st_mtime).strftime('%Y-%m-%d %I:%M %p'),
+                "size": f.stat().st_size
+            })
+        logs.sort(key=lambda x: x["mtime"], reverse=True)
 
     return render_template(
         "index.html",
-        videos=videos,
-        selected=selected_video_display,
-        random_mode=random_mode,
-        random_interval=random_interval,
         logs=logs,
-        current_random_video=current_random_video,
+        videos=fixed_order,
+        selected=selected_video,
+        playlist_mode=mode,
+        interval=interval,
         last_updated=last_updated,
+        fixed_order=fixed_order,
+        manage_videos=manage_videos, 
         time_remaining=time_remaining,
-        pause=is_paused
+        pause=pause_flag,
+        video_count=len(fixed_order),
+        theme=theme,
+        days=days_schedule,
+        current_time=current_time,
+        is_schedule_enabled_now=schedule_enabled,
+        next_start_time=next_start_time,
+        triggered_flag=triggered_flag,
+        delay=delay
     )
 
 @app.route("/select", methods=["POST"])
 def select():
-    global random_thread, stop_random_thread
+    action = request.form.get("action", "")
+        # Normal save logic below
+    playlist_mode = request.form.get("mode", "")
+    interval_str = request.form.get("interval", "0")
+    triggered_flag = request.form.get("triggered_flag") == "on"
+    delay = int(request.form.get("delay", 0))
 
-    random_mode = request.form.get("random_mode")
-    if random_mode == "on":
-        interval_str = request.form.get("interval")
-        try:
-            interval = int(interval_str)
-            if interval <= 0:
-                raise ValueError()
-        except (ValueError, TypeError):
-            flash("Invalid interval selected for random mode", "danger")
-            return redirect(url_for("index"))
+    try:
+        interval = int(interval_str)
+        if interval < 0:
+            raise ValueError()
+    except (ValueError, TypeError):
+        flash("Invalid interval value", "danger")
+        return redirect(url_for("index"))    
+    
+    if action == "shuffle":
+        settings = load_settings()
+        order = settings.get("playlist", {}).get("order", [])
+        
+        # Separate active and inactive videos
+        active_videos = [v for v in order if v.get("active", True)]
+        inactive_videos = [v for v in order if not v.get("active", True)]
+        
+        random.shuffle(active_videos)
+        
+        # Combine shuffled active with inactive
+        new_order = active_videos + inactive_videos
 
-        videos = sorted([f.name for f in VIDEO_FOLDER.glob("*.mp4")])
-        if not videos:
-            flash("No videos available for random playback", "danger")
-            return redirect(url_for("index"))
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        update_playlist_settings(mode="fixed",interval=interval,last_updated=timestamp,order=new_order,triggered_flag=triggered_flag,delay=delay)
 
-        if random_thread and random_thread.is_alive():
-            stop_random_thread.set()
-            random_thread.join()
-
-        update_random_config(True, interval)
-
-        stop_random_thread.clear()
-        random_thread = threading.Thread(target=random_video_updater, daemon=True)
-        random_thread.start()
-
-        flash(f"Random mode enabled with interval {interval} minutes", "success")
+        # Now load settings again to update selected_video
+        settings = load_settings()
+        if new_order:
+            settings["selected_video"] = new_order[0]["filename"]
+            save_settings(settings)
+        
+        flash("Playlist order shuffled!", "success")
         return redirect(url_for("index"))
+    
+
+
+    videos = sorted([f.name for f in VIDEO_FOLDER.glob("*.mp4")])
+    if not videos:
+        flash("No videos found in the Videos folder", "danger")
+        return redirect(url_for("index"))
+
+    if playlist_mode == "random":
+        if interval == 0:
+            flash("Interval must be greater than zero for random mode", "danger")
+            return redirect(url_for("index"))
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        update_playlist_settings(mode="random",interval=interval,last_updated=timestamp,triggered_flag=triggered_flag,delay=delay)
+
+        settings = load_settings()
+        current_video = settings.get("selected_video", "")
+        order = settings.get("playlist", {}).get("order", [])
+        active_files = [item["filename"] for item in order if item.get("active", True)]
+
+        if not active_files:
+            flash("No active videos available for random playback", "danger")
+            return redirect(url_for("index"))
+
+        other_choices = [f for f in active_files if f != current_video]
+        new_video = random.choice(other_choices) if other_choices else current_video
+
+        settings["selected_video"] = new_video
+        save_settings(settings)
+
+        flash(f"Random mode enabled with interval {interval} seconds", "success")
+
+    elif playlist_mode == "fixed":
+        if interval == 0:
+            flash("Interval must be greater than zero for fixed mode", "danger")
+            return redirect(url_for("index"))
+
+        order_str = request.form.get("fixed_order", "")
+        filenames = [v.strip() for v in order_str.split(",") if v.strip() in videos]
+
+        if not filenames:
+            flash("Please provide a valid fixed order with existing videos", "danger")
+            return redirect(url_for("index"))
+
+        existing_order = load_settings().get("playlist", {}).get("order", [])
+        existing_dict = {entry['filename']: entry for entry in existing_order if 'filename' in entry}
+
+        new_order = []
+        for fn in filenames:
+            new_order.append({"filename": fn, "active": True})
+
+        for fn, entry in existing_dict.items():
+            if fn not in filenames:
+                new_order.append({"filename": fn, "active": False})
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        update_playlist_settings(mode="fixed", interval=interval, last_updated=timestamp, order=new_order,triggered_flag=triggered_flag,delay=delay)
+
+        # Now load settings again to update selected_video
+        settings = load_settings()
+        if new_order:
+            settings["selected_video"] = new_order[0]["filename"]
+            save_settings(settings)
+
+        flash(f"Fixed playlist mode enabled with interval {interval} seconds", "success")
 
     else:
         selected_video = request.form.get("video")
         if selected_video and (VIDEO_FOLDER / selected_video).exists():
-            if random_thread and random_thread.is_alive():
-                stop_random_thread.set()
-                random_thread.join()
-
-            update_random_config(False)
-
+            update_playlist_settings(mode="single", interval=0, last_updated="",triggered_flag=triggered_flag,delay=delay)
             settings = load_settings()
             settings["selected_video"] = selected_video
             save_settings(settings)
-
-            flash(f"Selected video set to: {selected_video}", "success")
+            flash(f"Selected single video: {selected_video}", "success")
         else:
             flash("Invalid video selection", "danger")
-        return redirect(url_for("index"))
 
-@app.route('/pause_toggle', methods=['GET', 'POST'])
+    return redirect(url_for("index"))
+
+@app.route('/pause_toggle', methods=['POST'])
 def pause_toggle():
-    if request.method == 'POST':
-        pause = request.form.get('pause')  # checkbox value if checked, else None
-        is_paused = pause == 'on'
-        write_pause_flag(is_paused)
-        # After update, redirect to GET to avoid form resubmission on refresh
-        return redirect(url_for('index'))
-
-    # GET request
-    is_paused = read_pause_flag()
-    return render_template('index.html', pause=is_paused)
-
-
+    pause = request.form.get('pause')  # 'on' if checked, else None
+    is_paused = pause == 'on'
+    write_pause_flag(is_paused)
+    return redirect(url_for('index'))
 
 @app.route('/videos/<filename>')
 def video_file(filename):
     full_path = VIDEO_FOLDER / filename
-    print(f"Serving video file: {full_path}")
+    log(f"Serving video file: {full_path}")
     if not full_path.exists():
-        print("File does not exist!")
+        log("File does not exist!")
+        return "File not found", 404
     return send_from_directory(VIDEO_FOLDER, filename)
+
+
+@app.route('/images/<filename>')
+def image_file(filename):
+    full_path = IMAGES_FOLDER / filename
+    log(f"Serving video file: {full_path}")
+    if not full_path.exists():
+        log("File does not exist!")
+        return "File not found", 404
+    return send_from_directory(IMAGES_FOLDER, filename)
+
 
 @app.route('/upload', methods=['POST'])
 def upload():
@@ -241,19 +265,115 @@ def upload():
     if file and file.filename.lower().endswith('.mp4'):
         save_path = VIDEO_FOLDER / file.filename
         file.save(save_path)
+
+        # Update playlist order by appending new video with active = True
+        settings = load_settings()
+        order = settings.get("playlist", {}).get("order", [])
+
+        # Check if filename already present
+        if not any(item["filename"] == file.filename for item in order):
+            order.append({"filename": file.filename, "active": True})
+            settings["playlist"]["order"] = order
+            save_settings(settings)
+
         flash(f'Uploaded: {file.filename}', 'success')
     else:
         flash('Only .mp4 files are allowed', 'danger')
     return redirect(url_for('index'))
+
+
+
+@app.route('/save_schedule', methods=['POST'])
+def save_schedule():
+    settings = load_settings()
+    current_days = settings.get("days", {})
+    days = {}
+
+    for day in ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday']:
+        key = day.lower()
+        enabled = request.form.get(f"{key}Enabled") == 'on'
+
+        # Only get values from form if field is enabled
+        if enabled:
+            start_time = request.form.get(f"{key}Start") or "00:00"
+            end_time = request.form.get(f"{key}End") or "23:59"
+        else:
+            # Fall back to existing values in JSON if present
+            start_time = current_days.get(day, {}).get("start", "00:00")
+            end_time = current_days.get(day, {}).get("end", "23:59")
+
+        days[day] = {
+            "enabled": enabled,
+            "start": start_time,
+            "end": end_time
+        }
+
+    settings["days"] = days
+    save_settings(settings)
+    flash("Schedule saved successfully!", "success")
+    return redirect(url_for('index'))
+
+
+
+
+@app.route('/update_status', methods=['POST'])
+def update_status():
+    filename = request.form.get('filename')
+    active = request.form.get('active') == 'true'
+
+    settings = load_settings()
+    order = settings.get('playlist', {}).get('order', [])
+
+    # Count active videos before updating
+    active_count = sum(1 for v in order if v.get('active', True))
+
+    # Find target video
+    target_video = next((v for v in order if v['filename'] == filename), None)
+
+    # If trying to deactivate and it's the only active video
+    if target_video and not active and active_count <= 1:
+        flash("At least one video must remain active.", "danger")
+        return redirect(url_for('index'))
+
+    # If not found, optionally add it
+    if not target_video:
+        order.append({'filename': filename, 'active': active})
+    else:
+        target_video['active'] = active
+
+    settings['playlist']['order'] = order
+    save_settings(settings)
+
+    # After updating, check how many are now active
+    updated_active = [v for v in order if v.get('active', True)]
+
+    if len(updated_active) == 1:
+        only_video = updated_active[0]['filename']
+        update_playlist_settings(mode="single", interval=0, last_updated="")
+        settings = load_settings()
+        settings["selected_video"] = only_video
+        save_settings(settings)
+        flash(f"Only one active video remains. Switched to single mode with video: {only_video}", "info")
+    else:
+        flash(f"Updated status for {filename}: {'Active' if active else 'Inactive'}", "success")
+
+    return redirect(url_for('index'))
+
 
 @app.route('/delete/<filename>', methods=['POST'])
 def delete(filename):
     filepath = VIDEO_FOLDER / filename
     if filepath.exists():
         filepath.unlink()
+
+        # Remove from playlist order
+        settings = load_settings()
+        order = settings.get("playlist", {}).get("order", [])
+        order = [item for item in order if item["filename"] != filename]
+        settings["playlist"]["order"] = order
+        save_settings(settings)
+
         flash(f'Deleted {filename}', 'success')
-        if CONFIG_FILE.exists() and CONFIG_FILE.read_text().strip() == filename:
-            CONFIG_FILE.unlink()
     else:
         flash('File not found', 'danger')
     return redirect(url_for('index'))
@@ -265,7 +385,6 @@ def view_log(filename):
     if not filepath.exists() or not filepath.is_file():
         flash("Log file not found", "danger")
         return redirect(url_for('index'))
-    content = ""
     try:
         with open(filepath, 'r') as f:
             content = f.read(10000)
@@ -274,10 +393,28 @@ def view_log(filename):
         return redirect(url_for('index'))
     return render_template("view_log.html", filename=safe_filename, content=content)
 
+@app.route('/logs/raw/<filename>')
+def get_log_content(filename):
+    safe_filename = os.path.basename(filename)
+    filepath = LOG_FOLDER / safe_filename
+    if not filepath.exists() or not filepath.is_file():
+        return "File not found", 404
+
+    try:
+        with open(filepath, 'r') as f:
+            content = f.read(10000)
+        return content, 200, {'Content-Type': 'text/plain'}
+    except Exception as e:
+        return f"Error reading file: {e}", 500
+
+
+
+
 @app.route('/logs/delete/<filename>', methods=['POST'])
 def delete_log(filename):
     safe_filename = os.path.basename(filename)
     filepath = LOG_FOLDER / safe_filename
+
     if filepath.exists():
         filepath.unlink()
         flash(f"Deleted log {safe_filename}", "success")
@@ -286,4 +423,4 @@ def delete_log(filename):
     return redirect(url_for('index'))
 
 if __name__ == "__main__":
-    app.run(debug=True, host="0.0.0.0", port=5000)
+    app.run(host="0.0.0.0", port=5000)

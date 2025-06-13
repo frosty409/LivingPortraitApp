@@ -1,10 +1,62 @@
 {
-  "selected_video": "None",
-  "random": {
-    "enabled": false,
-    "interval": 0,
-    "video_name": "",
-    "last_updated": ""
+  "selected_video": "Lady.mp4",
+  "pause_flag": false,
+  "days": {
+    "Monday": {
+      "enabled": false,
+      "start": "19:00",
+      "end": "22:00"
+    },
+    "Tuesday": {
+      "enabled": false,
+      "start": "19:00",
+      "end": "22:00"
+    },
+    "Wednesday": {
+      "enabled": false,
+      "start": "19:00",
+      "end": "22:00"
+    },
+    "Thursday": {
+      "enabled": false,
+      "start": "19:00",
+      "end": "22:00"
+    },
+    "Friday": {
+      "enabled": false,
+      "start": "19:00",
+      "end": "22:00"
+    },
+    "Saturday": {
+      "enabled": false,
+      "start": "19:00",
+      "end": "22:00"
+    },
+    "Sunday": {
+      "enabled": false,
+      "start": "19:00",
+      "end": "22:00"
+    }
   },
-  "pause_flag": true
+  "playlist": {
+    "triggered_flag": true,
+    "delay": 0,
+    "mode": "single",
+    "interval": 0,
+    "last_updated": "",
+    "order": [
+      {
+        "filename": "Lady.mp4",
+        "active": true
+      },
+      {
+        "filename": "Gent.mp4",
+        "active": true
+      },
+      {
+        "filename": "Girl.mp4",
+        "active": true
+      }
+    ]
+  }
 }

@@ -1,81 +1,33 @@
 #!/usr/bin/env python3
 import vlc
+import sys
+import atexit
+import threading
+from time import sleep
 from gpiozero import MotionSensor
 from pathlib import Path
-from time import sleep
-from datetime import datetime
-import json
-import sys
+from shared.vlc_helper import (
+    log,
+    playlist_updater,
+    stop_playlist_thread,
+    update_playlist_timestamp_on_startup,
+    get_selected_video,
+    read_pause_flag
+)
 
-# === Configuration ===
-VIDEO_FOLDER = Path('/home/pi/Videos')
 LOG_FOLDER = Path('/home/pi/logs')
-SETTINGS_FILE = Path("/home/pi/settings.json")
-PAUSE_VIDEO = Path("/home/pi/PauseVideo/paused_rotated.mp4")
+VIDEO_FOLDER = Path('/home/pi/videos')
+PAUSE_VIDEO = Path("/home/pi/pause_video/paused_rotated.mp4")
 
-# Create log folder if it doesn't exist
-LOG_FOLDER.mkdir(exist_ok=True)
-
-def log(msg):
-    timestamp = f"[{datetime.now().isoformat()}]"
-    log_line = f"{timestamp} {msg}"
-    print(log_line)
-    date_str = datetime.now().strftime("%Y-%m-%d")
-    log_file = LOG_FOLDER / f"motion_log_{date_str}.txt"
-    with log_file.open("a") as f:
-        f.write(f"{log_line}\n")
-
-def read_random_config():
+def on_exit():
     try:
-        with open(SETTINGS_FILE, 'r') as f:
-            settings = json.load(f)
-
-        random_settings = settings.get("random", {})
-        enabled = random_settings.get("enabled", False)
-        interval = random_settings.get("interval", 0)
-        video_name = random_settings.get("video_name", "")
-        last_updated = random_settings.get("last_updated", "")
-
-        # Update last_updated if enabled on startup
-        if enabled:
-            new_timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-            random_settings["last_updated"] = new_timestamp
-            settings["random"] = random_settings
-            with open(SETTINGS_FILE, "w") as f:
-                json.dump(settings, f, indent=2)
-            log(f"[Startup] Updated last_updated to: {new_timestamp}")
-
-        return enabled, interval, video_name, random_settings.get("last_updated", "")
-
-    except Exception as e:
-        log(f"Failed to read or update settings.json: {e}")
-        return False, 0, "", ""
-
-def get_selected_video():
-    try:
-        with open(SETTINGS_FILE, 'r') as f:
-            settings = json.load(f)
-        selected_name = settings.get("selected_video", "").strip()
-        video_path = VIDEO_FOLDER / selected_name
-        if video_path.exists():
-            return str(video_path)
-        else:
-            log(f"Selected video {selected_name} not found in folder")
-            return None
-    except Exception as e:
-        log(f"Failed to read selected_video from settings.json: {e}")
-        return None
-
-def read_pause_flag():
-    try:
-        with open(SETTINGS_FILE, 'r') as f:
-            settings = json.load(f)
-        return settings.get("pause_flag", False)
-    except Exception as e:
-        log(f"Failed to read pause_flag from settings.json: {e}")
-        return False
+        player.stop()
+    except Exception:
+        pass
+    log("[EXIT] Script is exiting.")
 
 def main():
+    log("SYSTEM HAS STARTED")
     if not VIDEO_FOLDER.exists():
         print(f"Folder {VIDEO_FOLDER} not found")
         sys.exit(1)
@@ -90,92 +42,73 @@ def main():
     # Initialize PIR sensor
     pir = MotionSensor(4)
 
-    # Load random settings
-    enabled, interval, video_name, _ = read_random_config()
+    # Start playlist updater thread
+    update_playlist_timestamp_on_startup()
+    global playlist_thread
+    playlist_thread = threading.Thread(target=playlist_updater, daemon=True)
+    playlist_thread.start()
+    log("Started playlist updater thread")
 
-    # Get selected video
+    # VLC setup using proper instance
+    instance = vlc.Instance()
+    player = instance.media_player_new()
+    pause_media = instance.media_new(str(PAUSE_VIDEO))
+
+    # Start with selected or fallback video
     media_path = get_selected_video()
     if not media_path:
         media_path = str(video_files[0])
         log(f"Falling back to {media_path}")
 
-    # Setup VLC player and media
-    player = vlc.MediaPlayer()
-    media = vlc.Media(media_path)
-    player.set_media(media)
-
-    # Preload pause video
-    pause_media = vlc.Media(str(PAUSE_VIDEO))
-
-    # Start paused with selected video loaded
-    player.play()
-    sleep(0.5)
-    player.set_pause(1)
-    player.set_time(0)
-    log(f"Loaded video {Path(media_path).name} in paused state")
-
-    paused_mode = False
-
     try:
         while True:
+            log("Waiting for motion...")
+            pir.wait_for_motion()
+            log("Motion detected!")
+
             pause_flag = read_pause_flag()
 
-            if pause_flag and not paused_mode:
-                log("Pause flag detected ON. Switching to pause screen.")
-                if player.is_playing():
-                    player.stop()
-                player.set_media(pause_media)
-                player.play()
-                sleep(0.5)
-                player.set_pause(1)
-                player.set_time(0)
-                log(f"[PAUSED] Loaded pause screen: {PAUSE_VIDEO.name}")
-                paused_mode = True
-
-            elif not pause_flag and paused_mode:
-                log("[UNPAUSED] Pause flag cleared, returning to motion-triggered mode")
-                if player.is_playing():
-                    player.stop()
-                new_path = get_selected_video()
-                if new_path and new_path != media_path:
-                    media_path = new_path
-                    log(f"Updated video selection to {Path(media_path).name}")
-                media = vlc.Media(media_path)
-                player.set_media(media)
-                player.play()
-                sleep(0.5)
-                player.set_pause(1)
-                player.set_time(0)
-                paused_mode = False
-
-            if not paused_mode:
-                log("Waiting for motion...")
-                pir.wait_for_motion()
-                log("Motion detected! Playing video")
-                new_path = get_selected_video()
-                if new_path and new_path != media_path:
-                    media_path = new_path
-                    log(f"Updated video selection to {Path(media_path).name}")
-                media = vlc.Media(media_path)
-                player.set_media(media)
-                player.play()
-                sleep(0.5)
-                while player.get_state() not in (vlc.State.Ended, vlc.State.Stopped):
-                    if read_pause_flag():
-                        log("Pause detected mid-playback. Stopping video.")
-                        player.stop()
-                        break
-                    sleep(0.1)
-                log("Video ended or paused. Resetting...")
-                player.pause()
-                player.set_time(0)
+            if pause_flag:
+                log("Pause flag is ON. Playing pause screen.")
+                media = pause_media
+                media_path = str(PAUSE_VIDEO)
             else:
-                sleep(1)
+                new_path = get_selected_video()
+                if new_path and new_path != media_path:
+                    media_path = new_path
+                    log(f"Updated video selection to {Path(media_path).name}")
+                media = instance.media_new(media_path)
+
+            player.set_media(media)
+            player.play()
+            sleep(0.5)
+
+            while player.get_state() not in (vlc.State.Ended, vlc.State.Stopped, vlc.State.Error):
+                sleep(0.1)
+
+            log("Video ended. Resetting player...")
+            player.stop()  # Use stop() instead of pause/resetting time
 
     except KeyboardInterrupt:
         log("Exiting")
+        stop_playlist_thread.set()
+        playlist_thread.join()
         player.stop()
         sys.exit(0)
 
+
+
+
+def on_exit():
+    log("[EXIT] Script is exiting.")
+
+atexit.register(on_exit)
+
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except Exception as e:
+        import traceback
+        log("[CRASH] Uncaught exception:")
+        log(traceback.format_exc())
+        raise
