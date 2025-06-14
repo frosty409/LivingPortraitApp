@@ -1,6 +1,6 @@
 {
-  "selected_video": "Lady.mp4",
-  "pause_flag": false,
+  "selected_video": "Girl.mp4",
+  "pause_flag": true,
   "days": {
     "Monday": {
       "enabled": false,
@@ -44,19 +44,6 @@
     "mode": "single",
     "interval": 0,
     "last_updated": "",
-    "order": [
-      {
-        "filename": "Lady.mp4",
-        "active": true
-      },
-      {
-        "filename": "Gent.mp4",
-        "active": true
-      },
-      {
-        "filename": "Girl.mp4",
-        "active": true
-      }
-    ]
+    "order": []
   }
 }

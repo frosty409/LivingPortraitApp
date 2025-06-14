@@ -12,12 +12,19 @@ from shared.vlc_helper import (
     stop_playlist_thread,
     update_playlist_timestamp_on_startup,
     get_selected_video,
-    read_pause_flag
+    read_pause_flag,
+    get_triggered_flag,
+    get_trigger_delay_seconds,
+    is_schedule_enabled_now
+    
 )
 
 LOG_FOLDER = Path('/home/pi/logs')
 VIDEO_FOLDER = Path('/home/pi/videos')
 PAUSE_VIDEO = Path("/home/pi/pause_video/paused_rotated.mp4")
+
+# Global player object
+player = None
 
 def on_exit():
     try:
@@ -26,8 +33,90 @@ def on_exit():
         pass
     log("[EXIT] Script is exiting.")
 
+atexit.register(on_exit)
+
+# Helper: load and pause a media file
+def load_and_pause(media_path):
+    media = vlc.Media(media_path)
+    player.set_media(media)
+    player.play()
+    sleep(0.5)
+    player.set_pause(1)
+    player.set_time(0)
+
+# Helper: play video endlessly until paused
+def play_endless():
+    log("Triggered mode OFF — playing video endlessly.")
+    media_path = get_selected_video()
+    if not media_path:
+        log("No video selected to play.")
+        return
+
+    while True:
+        media = vlc.Media(media_path)
+        player.set_media(media)
+        player.play()
+        sleep(0.5)  # Let it start playing
+
+        # Wait until video ends or pause is triggered
+        while player.get_state() not in (vlc.State.Ended, vlc.State.Stopped):
+            if read_pause_flag() or not is_schedule_enabled_now():
+                log("Pause detected mid-playback. Stopping video.")
+                player.stop()
+                return  # Exit endless loop
+
+            if get_triggered_flag():  # Check if user turned on motion trigger
+                log("Triggered flag changed to ON during endless loop. Switching mode.")
+                player.stop()
+                return
+
+            sleep(0.1)
+
+        log("Video ended. Replaying...")
+        # Let VLC settle before next play
+        sleep(0.5)
+
+
+# Helper: play video once with motion trigger and delay after
+def play_triggered(delay_seconds):
+    log("Waiting for motion...")
+    pir.wait_for_motion()
+    log("Motion detected! Playing video")
+
+    media_path = get_selected_video()
+    if media_path:
+        media = vlc.Media(media_path)
+        player.set_media(media)
+        player.play()
+        sleep(0.5)
+
+        # Play until video ends or paused mid-playback
+        while player.get_state() not in (vlc.State.Ended, vlc.State.Stopped):
+            if read_pause_flag() or not is_schedule_enabled_now():
+                log("Pause detected mid-playback. Stopping video.")
+                player.stop()
+                break
+            if not get_triggered_flag():
+               log("Triggered flag turned OFF during playback. Stopping video.")
+               player.stop()
+               break
+            
+            sleep(0.1)
+
+        log("Video ended or paused. Waiting delay before next motion...")
+        player.pause()
+        player.set_time(0)
+
+        # Delay before next motion detection
+        if delay_seconds > 0:
+            log(f"Waiting {delay_seconds} seconds before listening for motion again.")
+            sleep(delay_seconds)
+
 def main():
+    global player, pir
+
     log("SYSTEM HAS STARTED")
+
     if not VIDEO_FOLDER.exists():
         print(f"Folder {VIDEO_FOLDER} not found")
         sys.exit(1)
@@ -49,60 +138,72 @@ def main():
     playlist_thread.start()
     log("Started playlist updater thread")
 
-    # VLC setup using proper instance
-    instance = vlc.Instance()
-    player = instance.media_player_new()
-    pause_media = instance.media_new(str(PAUSE_VIDEO))
-
     # Start with selected or fallback video
     media_path = get_selected_video()
     if not media_path:
         media_path = str(video_files[0])
         log(f"Falling back to {media_path}")
 
+    # VLC setup using proper instance
+    instance = vlc.Instance()
+    player = instance.media_player_new()
+    pause_media = instance.media_new(str(PAUSE_VIDEO))
+
+    # Preload pause video
+    paused_mode = False
+    load_and_pause(media_path)
+    log(f"Loaded video {Path(media_path).name} in paused state")
+
     try:
         while True:
-            log("Waiting for motion...")
-            pir.wait_for_motion()
-            log("Motion detected!")
-
             pause_flag = read_pause_flag()
+            triggered_flag = get_triggered_flag()
+            delay_seconds = get_trigger_delay_seconds()
+            schedule_enabled = is_schedule_enabled_now()
+            
 
-            if pause_flag:
-                log("Pause flag is ON. Playing pause screen.")
-                media = pause_media
-                media_path = str(PAUSE_VIDEO)
-            else:
+            # Handle pause ON
+            if (pause_flag or not schedule_enabled)and not paused_mode:
+                log("Pause flag detected ON. Switching to pause screen.")
+                if player.is_playing():
+                    player.stop()
+                player.set_media(pause_media)
+                player.play()
+                sleep(0.5)
+                player.set_pause(1)
+                player.set_time(0)
+                log(f"[PAUSED] Loaded pause screen: {PAUSE_VIDEO.name}")
+                paused_mode = True
+
+            # Handle pause OFF
+            elif (not pause_flag and schedule_enabled) and paused_mode:
+                log("[UNPAUSED] Pause flag cleared, returning to playback mode")
+                if player.is_playing():
+                    player.stop()
                 new_path = get_selected_video()
                 if new_path and new_path != media_path:
                     media_path = new_path
                     log(f"Updated video selection to {Path(media_path).name}")
-                media = instance.media_new(media_path)
+                load_and_pause(media_path)
+                paused_mode = False
 
-            player.set_media(media)
-            player.play()
-            sleep(0.5)
+            
 
-            while player.get_state() not in (vlc.State.Ended, vlc.State.Stopped, vlc.State.Error):
-                sleep(0.1)
-
-            log("Video ended. Resetting player...")
-            player.stop()  # Use stop() instead of pause/resetting time
+            # Playback if not paused
+            if not paused_mode:
+                if not triggered_flag:
+                    play_endless()
+                else:
+                    play_triggered(delay_seconds)
+            else:
+                sleep(1)  # When paused, just wait
 
     except KeyboardInterrupt:
         log("Exiting")
+        player.stop()
         stop_playlist_thread.set()
         playlist_thread.join()
-        player.stop()
         sys.exit(0)
-
-
-
-
-def on_exit():
-    log("[EXIT] Script is exiting.")
-
-atexit.register(on_exit)
 
 if __name__ == "__main__":
     try:

@@ -54,6 +54,26 @@ def update_days_schedule(days_schedule):
     settings["days"] = days_schedule
     save_settings(settings)
 
+
+def get_triggered_flag():
+    settings = load_settings()
+    playlist = settings.get("playlist", {})
+
+    # Default to False if not set
+    flag = playlist.get("triggered_flag", False)
+
+    return bool(flag)
+
+def get_trigger_delay_seconds():
+    settings = load_settings()
+    playlist = settings.get("playlist", {})
+
+    delay = playlist.get("delay", 0)
+    try:
+        return int(delay)
+    except (ValueError, TypeError):
+        return 0
+
 def is_schedule_enabled_now():
     settings = load_settings()
     days = settings.get("days", {})

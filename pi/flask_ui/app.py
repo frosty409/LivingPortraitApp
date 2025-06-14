@@ -32,6 +32,9 @@ SETTINGS_FILE = Path("/home/pi/settings.json")
 VIDEO_FOLDER.mkdir(parents=True, exist_ok=True)
 LOG_FOLDER.mkdir(parents=True, exist_ok=True)
 
+def format_ampm(time_str):
+    return datetime.strptime(time_str, "%H:%M").strftime("%I:%M %p")
+
 @app.route("/")
 def index():
     current_time = datetime.now().strftime("%A %I:%M:%S %p") 
@@ -45,6 +48,15 @@ def index():
 
     # Get days schedule
     days_schedule = settings.get("days", {})
+
+    # Format times
+    for day, sched in days_schedule.items():
+        sched["start_ampm"] = format_ampm(sched["start"])
+        sched["end_ampm"] = format_ampm(sched["end"])
+    
+    # Get today's name, e.g., "Friday"
+    today = datetime.now().strftime("%A")
+    today_schedule = days_schedule.get(today, {})
 
     # Check if schedule is enabled right now
     schedule_enabled = is_schedule_enabled_now()
@@ -98,6 +110,8 @@ def index():
         video_count=len(fixed_order),
         theme=theme,
         days=days_schedule,
+        today_schedule=today_schedule,
+        today=today,
         current_time=current_time,
         is_schedule_enabled_now=schedule_enabled,
         next_start_time=next_start_time,

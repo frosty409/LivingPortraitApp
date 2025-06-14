@@ -83,29 +83,23 @@ else
     log_fail "Starting Flask service"
 fi
 
+echo "\nCreating  directory..."
+mkdir -p /home/pi/videos
+mkdir -p /home/pi/pause_video
+mkdir -p /home/pi/images
+mkdir -p /home/pi/logs
+mkdir -p /home/pi/shared
+mkdir -p /home/pi/flask_ui/templates
 
-echo -e "\nDownloading motion_vlc.py to /home/pi..."
+echo -e "\nDownloading  app files..."
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o /home/pi/motion_vlc.py
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o /home/pi/settings.json
 chmod +x /home/pi/motion_vlc.py
 
-echo "Creating videos and pause_video directory..."
-mkdir -p /home/pi/videos
-mkdir -p /home/pi/pause_video
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/images/logo.png" -o /home/pi/images/logo.png
 
-echo "Downloading paused_rotated.mp4 to /home/pi/pause_video..."
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/pause_video/paused_rotated.mp4" -o /home/pi/pause_video/paused_rotated.mp4
 
-echo -e "\nCreating logs folder..."
-mkdir -p /home/pi/logs
-
-echo -e "\nCreating shared folder..."
-mkdir -p /home/pi/shared
-
-echo -e "\nCreating Flask app directory and structure..."
-mkdir -p /home/pi/flask_ui/templates
-
-echo -e "\nDownloading Flask app files..."
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o /home/pi/flask_ui/app.py
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" -o /home/pi/flask_ui/templates/index.html
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" -o /home/pi/shared/vlc_helper.py

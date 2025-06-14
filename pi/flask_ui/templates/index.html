@@ -293,6 +293,13 @@ THat's
       overflow-y: auto;
       font-family: monospace;
     }
+
+
+    .dark-theme pre {
+  background-color: #1e1e1e;
+  color: #e0e0e0;
+  border: 1px solid #333;
+}
   </style>
 </head>
 
@@ -404,7 +411,21 @@ THat's
             <p class="text-muted small mb-0">View the current video and playlist based on the selected playback mode.
             </p><br>
 
+            
+{% if today_schedule.enabled %}
+<strong>Schedule for {{ today }}</strong>
+  <p>Start Time: {{ today_schedule.start_ampm }} - End End: {{ today_schedule.end_ampm }}</p>
+{% endif %}
 
+            {% if triggered_flag %}
+              <p>Triggered Mode: On</p>
+              {% set minutes = delay // 60 %}
+              {% set seconds = delay % 60 %}
+              <p>Trigger Delay: {{ minutes }}m {{ seconds }}s</p>
+            {% else %}
+              <p>Triggered Mode: Off</p>
+            {% endif %}
+            
             {% if playlist_mode == 'random' %}
             <p>Current Video: <strong>{{ selected }}</strong></p>
             {% if time_remaining is not none %}
@@ -517,7 +538,7 @@ THat's
               </div>
               <div class="mb-3">
                 <div class="mb-3">
-                  <label for="delay" class="form-label">Delay Before Playback:</label>
+                  <label for="delay" class="form-label">Trigger Delay:</label>
                   <select class="form-select" id="delay" name="delay" {% if not triggered_flag %}disabled{% endif %}>
                     {% for i in range(0, 601, 30) %}
                     <option value="{{ i }}" {% if delay==i %}selected{% endif %}>
