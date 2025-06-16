@@ -78,6 +78,10 @@ download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitA
 download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" "$HOME/flask_ui/templates/index.html"
 download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" "$HOME/shared/vlc_helper.py"
 
+VERSION=$(curl -fsSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/version.txt)
+echo -e "\n📦 Installed LivingPortraitApp version $VERSION"
+echo "$VERSION" > /home/pi/version.txt
+
 echo -e "\nSetting up Flask systemd service..."
 if [ ! -f /etc/systemd/system/flask_ui.service ]; then
     sudo tee /etc/systemd/system/flask_ui.service > /dev/null << EOF

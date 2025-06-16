@@ -19,21 +19,18 @@ This application enables you to display videos using VLC media player integratio
 
 ## Installation
 
-Using PuTTY (or any terminal), run the following command to install everything:
+Using PuTTY (or any terminal), run the following command to install everything:  Full setup (first install or fresh system)
 
 ```bash
 curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc.sh | bash
 ```
 
-1. Log in to your Raspberry Pi.
-2. Run this command to open the Raspberry Pi configuration tool:
 
+Using PuTTY (or any terminal), run the following command to Update only (skip system stuff, just update files)
 ```bash
-sudo raspi-config
+curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc.sh | bash -s -- --update-only
 ```
 
-Navigate to System Options > Boot / Auto Login.
 
-Select Console (text) login or Console Autologin depending on your preference.
 
 Finish and reboot your Raspberry Pi for changes to take effect.

@@ -15,6 +15,15 @@ LOG_FOLDER.mkdir(exist_ok=True)
 # Thread control
 stop_playlist_thread = threading.Event()
 
+def get_version():
+    try:
+        with open("/home/pi/version.txt", "r") as f:
+            return f.read().strip()
+    except FileNotFoundError:
+        return "unknown"
+
+VERSION = get_version()
+
 def log(msg):
     timestamp = f"[{datetime.now().isoformat()}]"
     log_line = f"{timestamp} {msg}"
