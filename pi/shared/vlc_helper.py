@@ -211,8 +211,11 @@ def write_pause_flag(is_paused):
 def playlist_updater():
     while not stop_playlist_thread.is_set():
         mode, interval, last_updated, order = get_playlist_settings()
+        pause_flag = read_pause_flag()
+        schedule_enabled = is_schedule_enabled_now()
+        
 
-        if mode not in ["random", "fixed"] or interval <= 0:
+        if mode not in ["random", "fixed"] or interval <= 0 or pause_flag or not schedule_enabled:
             time.sleep(5)
             continue
 
@@ -238,8 +241,7 @@ def playlist_updater():
             if mode == "random":
                 if len(active_files) > 1:
                     other_choices = [v for v in active_files if v != current_video]
-                    new_video = random.choice(other_choices) if other_choices else current_video
-                    log(f"randomnew_video: {new_video}")   
+                    new_video = random.choice(other_choices) if other_choices else current_video  
                 else:
                     new_video = active_files[0]
 
@@ -247,12 +249,9 @@ def playlist_updater():
                 if current_video in active_files:
                     idx = active_files.index(current_video)
                     new_video = active_files[(idx + 1) % len(active_files)]
-                    log(f"fixed: {new_video}")  
                 else:
                     new_video = active_files[0]
 
-                    
-            log(f"Made it here: {new_video}")  
             last_updated_str = now.strftime("%Y-%m-%d %H:%M:%S")
             settings["selected_video"] = new_video
             settings["playlist"]["last_updated"] = last_updated_str
