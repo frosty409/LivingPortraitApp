@@ -7,7 +7,7 @@ Welcome to the LivingPortraitApp project!
 This application enables you to display videos using VLC media player integration on a Raspberry Pi.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/screenshots/Capture1.PNG" width="30%" />
+  <img src="https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/screenshots/Capture.PNG" width="30%" />
   <img src="https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/screenshots/Capture2.PNG" width="30%" />
   <img src="https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/screenshots/Capture3.PNG" width="30%" />
 </p>
