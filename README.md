@@ -32,11 +32,5 @@ curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/hea
 ```
 
 
-Using PuTTY (or any terminal), run the following command to Update only (skip system stuff, just update files)
-```bash
-curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc.sh | bash -s -- --update-only
-```
-
-
 
 Finish and reboot your Raspberry Pi for changes to take effect.
