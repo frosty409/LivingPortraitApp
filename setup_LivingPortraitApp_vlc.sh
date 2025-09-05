@@ -1,15 +1,6 @@
 #!/bin/bash
 set -e
 
-# Flags
-UPDATE_ONLY=false
-for arg in "$@"; do
-  case $arg in
-    --update-only)
-      UPDATE_ONLY=true
-      ;;
-  esac
-done
 
 log_success() {
     echo -e "\e[32m✅ $1 completed successfully.\e[0m"
@@ -20,18 +11,7 @@ log_fail() {
     exit 1
 }
 
-download_if_changed() {
-    local url=$1
-    local dest=$2
 
-    if [ -f "$dest" ] && curl -fsSL "$url" | diff -q - "$dest" &>/dev/null; then
-        echo "✔ $dest is up to date"
-    else
-        curl -fsSL "$url" -o "$dest" && echo "⬇️  Updated $dest"
-    fi
-}
-
-if [ "$UPDATE_ONLY" = false ]; then
     echo -e "\nUpdating system..."
     if sudo apt update && sudo apt upgrade -y; then
         log_success "System update"
@@ -54,29 +34,34 @@ if [ "$UPDATE_ONLY" = false ]; then
     fi
 
     echo -e "\nSetting up Python virtual environment..."
-    if [ ! -d "$HOME/flask_venv" ]; then
-        python3 -m venv ~/flask_venv || log_fail "Virtual environment creation"
-        source ~/flask_venv/bin/activate
+    if [ ! -d "/home/pi/flask_venv" ]; then
+        python3 -m venv /home/pi/flask_venv || log_fail "Virtual environment creation"
+        source /home/pi/flask_venv/bin/activate
         pip install flask && deactivate || log_fail "Flask pip install"
         log_success "Flask virtual environment setup"
     else
         log_success "Virtual environment already exists"
     fi
-fi
+
 
 echo -e "\nCreating directories..."
-mkdir -p ~/videos ~/pause_video ~/images ~/logs ~/shared ~/flask_ui/templates
+mkdir -p /home/pi/videos 
+mkdir -p /home/pi/pause_video 
+mkdir -p /home/pi/images 
+mkdir -p /home/pi/logs 
+mkdir -p /home/pi/shared 
+mkdir -p /home/pi/flask_ui/templates
 
 echo -e "\nDownloading app files..."
-download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" "$HOME/motion_vlc.py"
-download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" "$HOME/settings.json"
-chmod +x ~/motion_vlc.py
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o /home/pi/motion_vlc.py
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o /home/pi/settings.json
 
-download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/images/logo.png" "$HOME/images/logo.png"
-download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/pause_video/paused_rotated.mp4" "$HOME/pause_video/paused_rotated.mp4"
-download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" "$HOME/flask_ui/app.py"
-download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" "$HOME/flask_ui/templates/index.html"
-download_if_changed "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" "$HOME/shared/vlc_helper.py"
+chmod +x /home/pi/motion_vlc.py
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/images/logo.png" -o /home/pi/images/logo.png
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/pause_video/paused_rotated.mp4" -o /home/pi/pause_video/paused_rotated.mp4
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o /home/pi/flask_ui/app.py
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" -o /home/pi/flask_ui/templates/index.html
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" -o /home/pi/shared/vlc_helper.py
 
 VERSION=$(curl -fsSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/version.txt)
 echo -e "\n📦 Installed LivingPortraitApp version $VERSION"
