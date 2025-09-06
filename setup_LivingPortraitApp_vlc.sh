@@ -16,12 +16,13 @@ log_fail() {
 }
 
 echo -e "\nUpdating package list..."
-sudo apt update || log_fail "apt update failed"
+sudo apt update -y || log_fail "apt update failed"
 
-echo -e "\nUpgrading packages..."
-sudo apt upgrade -y || log_fail "apt upgrade failed"
+echo -e "\nUpgrading packages (this may take several minutes)..."
+# Show progress, avoid waiting for input
+sudo DEBIAN_FRONTEND=noninteractive apt upgrade -y -o Dpkg::Options::="--force-confdef" -o Dpkg::Options::="--force-confold" || log_fail "apt upgrade failed"
 
-log_success "System update"
+log_success "System update completed"
 
 echo -e "\nChecking required packages..."
 REQUIRED_PKGS=(vlc python3-gpiozero python3-vlc python3-venv)
