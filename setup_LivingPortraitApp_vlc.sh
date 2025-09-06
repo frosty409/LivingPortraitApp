@@ -33,35 +33,33 @@ log_fail() {
         sudo apt install -y "${MISSING_PKGS[@]}" && log_success "Package installation" || log_fail "Package installation"
     fi
 
-    echo -e "\nSetting up Python virtual environment..."
-    if [ ! -d "/home/pi/flask_venv" ]; then
-        python3 -m venv /home/pi/flask_venv || log_fail "Virtual environment creation"
-        source /home/pi/flask_venv/bin/activate
-        pip install flask && deactivate || log_fail "Flask pip install"
-        log_success "Flask virtual environment setup"
-    else
-        log_success "Virtual environment already exists"
-    fi
-
+echo -e "\nSetting up Python virtual environment..."
+if [ ! -d "/home/pi/flask_venv" ]; then
+    sudo -u pi python3 -m venv /home/pi/flask_venv || log_fail "Virtual environment creation"
+    sudo -u pi /home/pi/flask_venv/bin/pip install flask || log_fail "Flask pip install"
+    log_success "Flask virtual environment setup"
+else
+    log_success "Virtual environment already exists"
+fi
 
 echo -e "\nCreating directories..."
-mkdir -p /home/pi/videos 
-mkdir -p /home/pi/pause_video 
-mkdir -p /home/pi/images 
-mkdir -p /home/pi/logs 
-mkdir -p /home/pi/shared 
-mkdir -p /home/pi/flask_ui/templates
+sudo -u pi mkdir -p /home/pi/videos 
+sudo -u pi mkdir -p /home/pi/pause_video 
+sudo -u pi mkdir -p /home/pi/images 
+sudo -u pi mkdir -p /home/pi/logs 
+sudo -u pi mkdir -p /home/pi/shared 
+sudo -u pi mkdir -p /home/pi/flask_ui/templates
 
 echo -e "\nDownloading app files..."
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o /home/pi/motion_vlc.py
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o /home/pi/settings.json
+sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o /home/pi/motion_vlc.py
+sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o /home/pi/settings.json
 
 chmod +x /home/pi/motion_vlc.py
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/images/logo.png" -o /home/pi/images/logo.png
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/pause_video/paused_rotated.mp4" -o /home/pi/pause_video/paused_rotated.mp4
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o /home/pi/flask_ui/app.py
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" -o /home/pi/flask_ui/templates/index.html
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" -o /home/pi/shared/vlc_helper.py
+sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/images/logo.png" -o /home/pi/images/logo.png
+sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/pause_video/paused_rotated.mp4" -o /home/pi/pause_video/paused_rotated.mp4
+sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o /home/pi/flask_ui/app.py
+sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" -o /home/pi/flask_ui/templates/index.html
+sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" -o /home/pi/shared/vlc_helper.py
 
 VERSION=$(curl -fsSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/version.txt)
 echo -e "\n📦 Installed LivingPortraitApp version $VERSION"
@@ -87,7 +85,7 @@ else
     echo "✔ flask_ui.service already exists"
 fi
 
-sudo systemctl daemon-reexec
+sudo systemctl daemon-reload
 sudo systemctl enable flask_ui
 sudo systemctl restart flask_ui
 log_success "Flask UI service enabled and restarted"
