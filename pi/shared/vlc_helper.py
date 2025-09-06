@@ -3,21 +3,25 @@ import json
 import random
 import threading
 import time
+import os
 from datetime import datetime, timedelta
 from pathlib import Path
 
 # Paths
-SETTINGS_FILE = Path("/home/pi/settings.json")
-VIDEO_FOLDER = Path("/home/pi/videos")
-LOG_FOLDER = Path('/home/pi/logs')
+HOME = Path(os.path.expanduser("~"))
+
+SETTINGS_FILE = HOME / "settings.json"
+VIDEO_FOLDER = HOME / "videos"
+LOG_FOLDER = HOME / "logs"
 LOG_FOLDER.mkdir(exist_ok=True)
 
 # Thread control
 stop_playlist_thread = threading.Event()
 
 def get_version():
+    version_file = HOME / "version.txt"
     try:
-        with open("/home/pi/version.txt", "r") as f:
+        with open(version_file, "r") as f:
             return f.read().strip()
     except FileNotFoundError:
         return "unknown"

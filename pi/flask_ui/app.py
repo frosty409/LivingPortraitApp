@@ -4,9 +4,13 @@ import os
 from datetime import datetime, timedelta
 import random
 from flask import jsonify
-
 import sys
-sys.path.append('/home/pi/')
+
+HOME = Path(os.path.expanduser("~"))
+
+# Add the shared folder to sys.path
+sys.path.append(str(HOME))
+
 from shared.vlc_helper import (
     log,
     load_settings,
@@ -24,13 +28,15 @@ from shared.vlc_helper import (
 app = Flask(__name__)
 app.secret_key = 'replace-this-with-a-secure-random-key'  # Change to a secure key in production
 
-VIDEO_FOLDER = Path("/home/pi/videos")
-IMAGES_FOLDER = Path("/home/pi/images")
-LOG_FOLDER = Path("/home/pi/logs")
-SETTINGS_FILE = Path("/home/pi/settings.json")
+VIDEO_FOLDER = HOME / "videos"
+IMAGES_FOLDER = HOME / "images"
+LOG_FOLDER = HOME / "logs"
+SETTINGS_FILE = HOME / "settings.json"
 
-VIDEO_FOLDER.mkdir(parents=True, exist_ok=True)
+# Ensure directories exist
 LOG_FOLDER.mkdir(parents=True, exist_ok=True)
+VIDEO_FOLDER.mkdir(parents=True, exist_ok=True)
+IMAGES_FOLDER.mkdir(parents=True, exist_ok=True)
 
 def format_ampm(time_str):
     return datetime.strptime(time_str, "%H:%M").strftime("%I:%M %p")

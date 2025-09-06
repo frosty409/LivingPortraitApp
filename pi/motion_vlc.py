@@ -3,6 +3,7 @@ import vlc
 import sys
 import atexit
 import threading
+import os
 from time import sleep
 from gpiozero import MotionSensor
 from pathlib import Path
@@ -19,9 +20,14 @@ from shared.vlc_helper import (
     
 )
 
-LOG_FOLDER = Path('/home/pi/logs')
-VIDEO_FOLDER = Path('/home/pi/videos')
-PAUSE_VIDEO = Path("/home/pi/pause_video/paused_rotated.mp4")
+HOME = Path(os.path.expanduser("~"))
+
+LOG_FOLDER = HOME / "logs"
+VIDEO_FOLDER = HOME / "videos"
+PAUSE_VIDEO = HOME / "pause_video" / "paused_rotated.mp4"
+
+# Make sure the log folder exists
+LOG_FOLDER.mkdir(parents=True, exist_ok=True)
 
 # Global player object
 player = None
