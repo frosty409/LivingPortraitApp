@@ -15,12 +15,13 @@ log_fail() {
     exit 1
 }
 
-echo -e "\nUpdating system..."
-if sudo apt update && sudo apt upgrade -y; then
-    log_success "System update"
-else
-    log_fail "System update"
-fi
+echo -e "\nUpdating package list..."
+sudo apt update || log_fail "apt update failed"
+
+echo -e "\nUpgrading packages..."
+sudo apt upgrade -y || log_fail "apt upgrade failed"
+
+log_success "System update"
 
 echo -e "\nChecking required packages..."
 REQUIRED_PKGS=(vlc python3-gpiozero python3-vlc python3-venv)
