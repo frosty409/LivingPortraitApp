@@ -80,6 +80,7 @@ After=network.target
 [Service]
 User=$USERNAME
 WorkingDirectory=$USER_HOME/flask_ui
+Environment=PYTHONPATH=$USER_HOME
 ExecStart=$VENV_PATH/bin/python $USER_HOME/flask_ui/app.py
 Restart=always
 
