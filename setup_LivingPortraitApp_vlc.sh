@@ -1,6 +1,10 @@
 #!/bin/bash
 set -e
 
+# Get current username and home directory
+USERNAME=$(whoami)
+USER_HOME="$HOME"
+VENV_PATH="$USER_HOME/flask_venv"
 
 log_success() {
     echo -e "\e[32m✅ $1 completed successfully.\e[0m"
@@ -11,59 +15,59 @@ log_fail() {
     exit 1
 }
 
+echo -e "\nUpdating system..."
+if sudo apt update && sudo apt upgrade -y; then
+    log_success "System update"
+else
+    log_fail "System update"
+fi
 
-    echo -e "\nUpdating system..."
-    if sudo apt update && sudo apt upgrade -y; then
-        log_success "System update"
-    else
-        log_fail "System update"
-    fi
+echo -e "\nChecking required packages..."
+REQUIRED_PKGS=(vlc python3-gpiozero python3-vlc python3-venv)
+MISSING_PKGS=()
+for pkg in "${REQUIRED_PKGS[@]}"; do
+    dpkg -s "$pkg" &>/dev/null || MISSING_PKGS+=("$pkg")
+done
 
-    echo -e "\nChecking required packages..."
-    REQUIRED_PKGS=(vlc python3-gpiozero python3-vlc python3-venv)
-    MISSING_PKGS=()
-    for pkg in "${REQUIRED_PKGS[@]}"; do
-        dpkg -s "$pkg" &>/dev/null || MISSING_PKGS+=("$pkg")
-    done
-
-    if [ ${#MISSING_PKGS[@]} -eq 0 ]; then
-        log_success "All required packages already installed"
-    else
-        echo "Installing missing packages: ${MISSING_PKGS[*]}"
-        sudo apt install -y "${MISSING_PKGS[@]}" && log_success "Package installation" || log_fail "Package installation"
-    fi
+if [ ${#MISSING_PKGS[@]} -eq 0 ]; then
+    log_success "All required packages already installed"
+else
+    echo "Installing missing packages: ${MISSING_PKGS[*]}"
+    sudo apt install -y "${MISSING_PKGS[@]}" && log_success "Package installation" || log_fail "Package installation"
+fi
 
 echo -e "\nSetting up Python virtual environment..."
-if [ ! -d "/home/pi/flask_venv" ]; then
-    sudo -u pi python3 -m venv /home/pi/flask_venv || log_fail "Virtual environment creation"
-    sudo -u pi /home/pi/flask_venv/bin/pip install flask || log_fail "Flask pip install"
+if [ ! -d "$VENV_PATH" ]; then
+    python3 -m venv "$VENV_PATH" || log_fail "Virtual environment creation"
+    "$VENV_PATH/bin/pip" install --upgrade pip
+    "$VENV_PATH/bin/pip" install flask || log_fail "Flask pip install"
     log_success "Flask virtual environment setup"
 else
     log_success "Virtual environment already exists"
 fi
 
 echo -e "\nCreating directories..."
-sudo -u pi mkdir -p /home/pi/videos 
-sudo -u pi mkdir -p /home/pi/pause_video 
-sudo -u pi mkdir -p /home/pi/images 
-sudo -u pi mkdir -p /home/pi/logs 
-sudo -u pi mkdir -p /home/pi/shared 
-sudo -u pi mkdir -p /home/pi/flask_ui/templates
+mkdir -p "$USER_HOME/videos" \
+         "$USER_HOME/pause_video" \
+         "$USER_HOME/images" \
+         "$USER_HOME/logs" \
+         "$USER_HOME/shared" \
+         "$USER_HOME/flask_ui/templates"
 
 echo -e "\nDownloading app files..."
-sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o /home/pi/motion_vlc.py
-sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o /home/pi/settings.json
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o "$USER_HOME/motion_vlc.py"
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o "$USER_HOME/settings.json"
+chmod +x "$USER_HOME/motion_vlc.py"
 
-chmod +x /home/pi/motion_vlc.py
-sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/images/logo.png" -o /home/pi/images/logo.png
-sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/pause_video/paused_rotated.mp4" -o /home/pi/pause_video/paused_rotated.mp4
-sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o /home/pi/flask_ui/app.py
-sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" -o /home/pi/flask_ui/templates/index.html
-sudo -u pi curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" -o /home/pi/shared/vlc_helper.py
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/images/logo.png" -o "$USER_HOME/images/logo.png"
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/pause_video/paused_rotated.mp4" -o "$USER_HOME/pause_video/paused_rotated.mp4"
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o "$USER_HOME/flask_ui/app.py"
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" -o "$USER_HOME/flask_ui/templates/index.html"
+curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" -o "$USER_HOME/shared/vlc_helper.py"
 
 VERSION=$(curl -fsSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/version.txt)
 echo -e "\n📦 Installed LivingPortraitApp version $VERSION"
-echo "$VERSION" > /home/pi/version.txt
+echo "$VERSION" > "$USER_HOME/version.txt"
 
 echo -e "\nSetting up Flask systemd service..."
 if [ ! -f /etc/systemd/system/flask_ui.service ]; then
@@ -73,8 +77,9 @@ Description=Flask Web UI for Video Selector
 After=network.target
 
 [Service]
-WorkingDirectory=/home/pi/flask_ui
-ExecStart=/home/pi/flask_venv/bin/python /home/pi/flask_ui/app.py
+User=$USERNAME
+WorkingDirectory=$USER_HOME/flask_ui
+ExecStart=$VENV_PATH/bin/python $USER_HOME/flask_ui/app.py
 Restart=always
 
 [Install]
@@ -98,8 +103,9 @@ Description=Run motion_vlc.py at boot
 After=network.target
 
 [Service]
-ExecStart=/usr/bin/python3 /home/pi/motion_vlc.py
-WorkingDirectory=/home/pi
+User=$USERNAME
+ExecStart=/usr/bin/python3 $USER_HOME/motion_vlc.py
+WorkingDirectory=$USER_HOME
 StandardOutput=inherit
 StandardError=inherit
 Restart=on-failure
