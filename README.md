@@ -34,7 +34,7 @@ curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/hea
 Using PuTTY (or any terminal), run the following command to install everything:  Full setup (first install or fresh system Raspberry Pi 5)
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/ssetup_LivingPortraitApp_vlc_pi5.sh | bash
+curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc_pi5.sh | bash
 ```
 
 
