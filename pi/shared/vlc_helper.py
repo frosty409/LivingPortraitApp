@@ -223,7 +223,7 @@ def write_pause_flag(is_paused):
 
 def playlist_updater():
     while not stop_playlist_thread.is_set():
-        mode, interval, last_updated, order = get_playlist_settings()
+        mode, interval, last_updated, order, triggered_flag, delay = get_playlist_settings()
         pause_flag = read_pause_flag()
         schedule_enabled = is_schedule_enabled_now()
         
