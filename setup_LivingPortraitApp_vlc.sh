@@ -2,7 +2,7 @@
 set -e
 
 # ============================================================
-# Raspberry Pi 53B, 3B+, 4, Zero, setup for LivingPortraitApp
+# Raspberry Pi 3B, 3B+, 4, Zero, setup for LivingPortraitApp
 # ============================================================
 
 # Get current username and home directory

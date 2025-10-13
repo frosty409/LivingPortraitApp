@@ -12,7 +12,7 @@ log_fail() { echo -e "\e[31m❌ $1\e[0m"; exit 1; }
 log_info "Downloading latest app files..."
 
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o "$USER_HOME/motion_vlc.py" || log_fail "Failed to download motion_vlc.py"
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o "$USER_HOME/settings.json" || log_fail "Failed to download settings.json"
+# curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o "$USER_HOME/settings.json" || log_fail "Failed to download settings.json"
 chmod +x "$USER_HOME/motion_vlc.py"
 
 curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/images/logo.png" -o "$USER_HOME/images/logo.png" || log_fail "Failed to download logo.png"
