@@ -51,6 +51,7 @@ def index():
     pause_flag = settings.get("pause_flag", False)
 
     mode, interval, last_updated, order, triggered_flag, delay = get_playlist_settings()
+    delay = delay or 0
 
     # Get days schedule
     days_schedule = settings.get("days", {})

@@ -154,7 +154,7 @@ def update_playlist_settings(mode=None, interval=None, last_updated=None, order=
         playlist["order"] = order
     if triggered_flag is not None:
         playlist["triggered_flag"] = triggered_flag
-    if interval is not None:
+    if delay is not None:
         playlist["delay"] = delay 
 
     settings["playlist"] = playlist
