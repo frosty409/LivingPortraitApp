@@ -417,14 +417,14 @@ THat's
   <p>Start Time: {{ today_schedule.start_ampm }} - End End: {{ today_schedule.end_ampm }}</p>
 {% endif %}
 
-            {% if triggered_flag %}
-              <p>Triggered Mode: On</p>
-              {% set minutes = delay // 60 %}
-              {% set seconds = delay % 60 %}
-              <p>Trigger Delay: {{ minutes }}m {{ seconds }}s</p>
-            {% else %}
-              <p>Triggered Mode: Off</p>
-            {% endif %}
+{% if triggered_flag %}
+  <p>Triggered Mode: On</p>
+  {% set minutes = (delay or 0) // 60 %}
+  {% set seconds = (delay or 0) % 60 %}
+  <p>Trigger Delay: {{ minutes }}m {{ seconds }}s</p>
+{% else %}
+  <p>Triggered Mode: Off</p>
+{% endif %}
             
             {% if playlist_mode == 'random' %}
             <p>Current Video: <strong>{{ selected }}</strong></p>
