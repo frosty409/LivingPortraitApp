@@ -52,36 +52,40 @@ def load_and_pause(media_path):
 
 # Helper: play video endlessly until paused
 def play_endless():
+    global last_played_path
     log("Triggered mode OFF — playing video endlessly.")
-    media_path = get_selected_video()
-    if not media_path:
-        log("No video selected to play.")
-        return
 
     while True:
-        media = vlc.Media(media_path)
+        # Hole das aktuell gewünschte Video aus den Settings
+        media_path = get_selected_video()
+        
+        # Wenn das Setting anders als das zuletzt gespielte Video ist, logge für den nächsten Durchlauf
+        if media_path != last_played_path:
+            log(f"Videoänderung erkannt (Settings -> {Path(media_path).name}). Wechsle nach aktuellem Video.")
+
+        # Das aktuelle Video abspielen
+        media = vlc.Media(last_played_path)
         player.set_media(media)
         player.play()
-        sleep(0.5)  # Let it start playing
+        sleep(0.5)  # Startzeit
 
-        # Wait until video ends or pause is triggered
+        # Warten, bis Video endet, Pause gedrückt wird oder Schedule off
         while player.get_state() not in (vlc.State.Ended, vlc.State.Stopped):
             if read_pause_flag() or not is_schedule_enabled_now():
                 log("Pause detected mid-playback. Stopping video.")
                 player.stop()
-                return  # Exit endless loop
-
-            if get_triggered_flag():  # Check if user turned on motion trigger
+                return
+            if get_triggered_flag():
                 log("Triggered flag changed to ON during endless loop. Switching mode.")
                 player.stop()
                 return
-
             sleep(0.1)
 
-        log("Video ended. Replaying...")
-        # Let VLC settle before next play
-        sleep(0.5)
+        log("Video beendet. Prüfe auf neues Video für nächsten Durchlauf.")
 
+        # Nach Video-Ende: Aktualisiere last_played_path
+        last_played_path = get_selected_video()
+        sleep(0.5)
 
 # Helper: play video once with motion trigger and delay after
 def play_triggered(delay_seconds):
@@ -149,6 +153,8 @@ def main():
     if not media_path:
         media_path = str(video_files[0])
         log(f"Falling back to {media_path}")
+    
+    last_played_path = media_path      # Neue Variable für Vergleich
 
     # VLC setup using proper instance
     instance = vlc.Instance()
@@ -191,6 +197,7 @@ def main():
                     media_path = new_path
                     log(f"Updated video selection to {Path(media_path).name}")
                 load_and_pause(media_path)
+                last_played_path = get_selected_video()
                 paused_mode = False
 
             
