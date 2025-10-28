@@ -7,9 +7,9 @@ Welcome to the LivingPortraitApp project!
 This application enables you to display videos using VLC media player integration on a Raspberry Pi.
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/screenshots/Capture.PNG" width="30%" />
-  <img src="https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/screenshots/Capture2.PNG" width="30%" />
-  <img src="https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/screenshots/Capture3.PNG" width="30%" />
+  <img src="https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/screenshots/Capture.PNG" width="30%" />
+  <img src="https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/screenshots/Capture2.PNG" width="30%" />
+  <img src="https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/screenshots/Capture3.PNG" width="30%" />
 </p>
 
 ---
@@ -28,20 +28,20 @@ This application enables you to display videos using VLC media player integratio
 Using PuTTY (or any terminal), run the following command to install everything:  Full setup (first install or fresh system Raspberry Pi 3B, 3B+, 4, Zero)
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc.sh | bash
+curl -sSL https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc.sh | bash
 ```
 
 Using PuTTY (or any terminal), run the following command to install everything:  Full setup (first install or fresh system Raspberry Pi 5)
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc_pi5.sh | bash
+curl -sSL https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc_pi5.sh | bash
 ```
 
 
 Using PuTTY (or any terminal), run the following command to update code changes only
 
 ```bash
-curl -sSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc_UpdateOnly.sh | bash
+curl -sSL https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/setup_LivingPortraitApp_vlc_UpdateOnly.sh | bash
 ```
 
 
