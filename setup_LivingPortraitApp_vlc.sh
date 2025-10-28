@@ -61,17 +61,17 @@ mkdir -p "$USER_HOME/videos" \
          "$USER_HOME/flask_ui/templates"
 
 echo -e "\nDownloading app files..."
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o "$USER_HOME/motion_vlc.py"
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/settings.json" -o "$USER_HOME/settings.json"
+curl -fsSL "https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/pi/motion_vlc.py" -o "$USER_HOME/motion_vlc.py"
+curl -fsSL "https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/pi/settings.json" -o "$USER_HOME/settings.json"
 chmod +x "$USER_HOME/motion_vlc.py"
 
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/images/logo.png" -o "$USER_HOME/images/logo.png"
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/pause_video/paused_rotated.mp4" -o "$USER_HOME/pause_video/paused_rotated.mp4"
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o "$USER_HOME/flask_ui/app.py"
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" -o "$USER_HOME/flask_ui/templates/index.html"
-curl -fsSL "https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" -o "$USER_HOME/shared/vlc_helper.py"
+curl -fsSL "https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/pi/images/logo.png" -o "$USER_HOME/images/logo.png"
+curl -fsSL "https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/pi/pause_video/paused_rotated.mp4" -o "$USER_HOME/pause_video/paused_rotated.mp4"
+curl -fsSL "https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/pi/flask_ui/app.py" -o "$USER_HOME/flask_ui/app.py"
+curl -fsSL "https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/pi/flask_ui/templates/index.html" -o "$USER_HOME/flask_ui/templates/index.html"
+curl -fsSL "https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/pi/shared/vlc_helper.py" -o "$USER_HOME/shared/vlc_helper.py"
 
-VERSION=$(curl -fsSL https://raw.githubusercontent.com/jdesign21/LivingPortraitApp/refs/heads/main/pi/version.txt)
+VERSION=$(curl -fsSL https://raw.githubusercontent.com/frosty409/LivingPortraitApp/refs/heads/main/pi/version.txt)
 echo -e "\n📦 Installed LivingPortraitApp version $VERSION"
 echo "$VERSION" > "$USER_HOME/version.txt"
 
