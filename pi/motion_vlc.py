@@ -25,6 +25,7 @@ HOME = Path(os.path.expanduser("~"))
 LOG_FOLDER = HOME / "logs"
 VIDEO_FOLDER = HOME / "videos"
 PAUSE_VIDEO = HOME / "pause_video" / "paused_rotated.mp4"
+last_played_path = None
 
 # Make sure the log folder exists
 LOG_FOLDER.mkdir(parents=True, exist_ok=True)
@@ -153,7 +154,8 @@ def main():
     if not media_path:
         media_path = str(video_files[0])
         log(f"Falling back to {media_path}")
-    
+        
+    global last_played_path    
     last_played_path = media_path      # Neue Variable für Vergleich
 
     # VLC setup using proper instance
